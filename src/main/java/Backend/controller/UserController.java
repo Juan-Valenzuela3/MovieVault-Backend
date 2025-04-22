@@ -140,48 +140,68 @@ public class UserController {
             return ResponseEntity.badRequest().body("Debe proporcionar al menos un valor para actualizar (nombre o email)");
         }
 
-        String endpoint = supabaseUrl + "/auth/v1/user";
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("apikey", supabaseAnonKey);
-        headers.set("Authorization", authToken); // Token JWT del usuario autenticado
-
-        // Solo incluir en el cuerpo los campos que se van a actualizar
-        Map<String, String> requestBody = new HashMap<>();
-        if (name != null && !name.isEmpty()) {
-            requestBody.put("user_metadata", String.format("{\"name\": \"%s\"}", name));
-        }
-        if (email != null && !email.isEmpty()) {
-            requestBody.put("email", email);
-        }
-
-        HttpEntity<Map<String, String>> request = new HttpEntity<>(requestBody, headers);
-
         try {
-            // PUT para actualizar los datos del usuario
-            ResponseEntity<String> response = restTemplate.exchange(
-                    endpoint,
-                    HttpMethod.PUT,
-                    request,
-                    String.class);
+            String oldEmail = extractEmailFromToken(authToken);
 
-            // Actualizar también en la DB si la respuesta es exitosa
-            if (response.getStatusCode().is2xxSuccessful() && email != null && !email.isEmpty()) {
-                String oldEmail = extractEmailFromToken(authToken);
+            // Actualizar metadatos del usuario si se proporciona el nombre
+            if (name != null && !name.isEmpty()) {
+                String userEndpoint = supabaseUrl + "/auth/v1/user";
 
+                HttpHeaders headers = new HttpHeaders();
+                headers.setContentType(MediaType.APPLICATION_JSON);
+                headers.set("apikey", supabaseAnonKey);
+                headers.set("Authorization", authToken);
+
+                Map<String, Object> requestBody = new HashMap<>();
+                Map<String, String> userMetadata = new HashMap<>();
+                userMetadata.put("name", name);
+                requestBody.put("user_metadata", userMetadata);
+
+                HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
+                restTemplate.exchange(userEndpoint, HttpMethod.PUT, request, String.class);
+            }
+
+            // Actualizar email si se proporciona (usa el endpoint específico para actualizar email)
+            if (email != null && !email.isEmpty()) {
+                String emailEndpoint = supabaseUrl + "/auth/v1/user";
+
+                HttpHeaders emailHeaders = new HttpHeaders();
+                emailHeaders.setContentType(MediaType.APPLICATION_JSON);
+                emailHeaders.set("apikey", supabaseAnonKey);
+                emailHeaders.set("Authorization", authToken);
+
+                Map<String, Object> emailBody = new HashMap<>();
+                emailBody.put("email", email);
+
+                HttpEntity<Map<String, Object>> emailRequest = new HttpEntity<>(emailBody, emailHeaders);
+                ResponseEntity<String> emailResponse = restTemplate.exchange(
+                        emailEndpoint,
+                        HttpMethod.PUT,
+                        emailRequest,
+                        String.class
+                );
+
+                // Si la actualización del email fue exitosa en Supabase Auth, actualizar en tu DB
+                if (emailResponse.getStatusCode().is2xxSuccessful()) {
+                    Users user = userService.findByEmail(oldEmail);
+                    if (user != null) {
+                        user.setEmail(email);
+                        if (name != null && !name.isEmpty()) {
+                            user.setName(name);
+                        }
+                        userService.updateUser(user);
+                    }
+                }
+            } else if (name != null && !name.isEmpty()) {
+                // Actualiza solo el nombre en tu DB si solo se proporcionó el nombre
                 Users user = userService.findByEmail(oldEmail);
                 if (user != null) {
-                    if (name != null && !name.isEmpty()) {
-                        user.setName(name);
-                    }
-                    user.setEmail(email);
+                    user.setName(name);
                     userService.updateUser(user);
                 }
             }
 
-            return ResponseEntity.status(response.getStatusCode())
-                    .body("Usuario actualizado correctamente: " + response.getBody());
+            return ResponseEntity.ok("Usuario actualizado correctamente");
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body("Error al actualizar el usuario: " + e.getMessage());
