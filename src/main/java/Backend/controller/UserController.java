@@ -1,5 +1,8 @@
 package Backend.controller;
 
+import Backend.entity.Users;
+import Backend.service.UserService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
@@ -20,6 +23,43 @@ public class UserController {
     private String supabaseAnonKey;
 
     private final RestTemplate restTemplate = new RestTemplate();
+
+    private final UserService userService;
+
+    @Autowired
+    public UserController(UserService userService) {
+        this.userService = userService;
+    }
+
+    // Método para extraer el email del token JWT
+    private String extractEmailFromToken(String authToken) {
+        try {
+            // Formato típico: "Bearer token..."
+            String token = authToken.replace("Bearer ", "");
+
+            // Dividir el token JWT en sus partes
+            String[] parts = token.split("\\.");
+            if (parts.length != 3) {
+                throw new IllegalArgumentException("Formato de token JWT inválido");
+            }
+
+            // Decodificar la parte del payload (segunda parte)
+            String payload = new String(java.util.Base64.getUrlDecoder().decode(parts[1]));
+
+            // Extraer el email usando una expresión simple
+            // Esto asume que el email está en formato "email":"valor@ejemplo.com"
+            int start = payload.indexOf("\"email\":\"") + 9;
+            int end = payload.indexOf("\"", start);
+
+            if (start > 8 && end > start) {
+                return payload.substring(start, end);
+            }
+
+            throw new IllegalArgumentException("No se pudo encontrar el email en el token");
+        } catch (Exception e) {
+            throw new RuntimeException("Error al extraer email del token: " + e.getMessage(), e);
+        }
+    }
 
     // Endpoint para registrar un nuevo usuario
     @PostMapping("/register")
@@ -46,6 +86,12 @@ public class UserController {
 
         try {
             ResponseEntity<String> response = restTemplate.postForEntity(endpoint, request, String.class);
+
+            // Si la respuesta es exitosa, guardar en la DB
+            if (response.getStatusCode().is2xxSuccessful()) {
+                userService.saveUser(email, name);
+            }
+
             return ResponseEntity.status(response.getStatusCode()).body(response.getBody());
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Error al registrar usuario: " + e.getMessage());
@@ -119,6 +165,20 @@ public class UserController {
                     HttpMethod.PUT,
                     request,
                     String.class);
+
+            // Actualizar también en la DB si la respuesta es exitosa
+            if (response.getStatusCode().is2xxSuccessful() && email != null && !email.isEmpty()) {
+                String oldEmail = extractEmailFromToken(authToken);
+
+                Users user = userService.findByEmail(oldEmail);
+                if (user != null) {
+                    if (name != null && !name.isEmpty()) {
+                        user.setName(name);
+                    }
+                    user.setEmail(email);
+                    userService.updateUser(user);
+                }
+            }
 
             return ResponseEntity.status(response.getStatusCode())
                     .body("Usuario actualizado correctamente: " + response.getBody());
