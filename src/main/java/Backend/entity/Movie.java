@@ -25,6 +25,9 @@ public class Movie {
     @Column(nullable = false)
     private String nameMovie;
 
+    @Column
+    private Long tmdbId;
+
     private String category;
     private String image;
 

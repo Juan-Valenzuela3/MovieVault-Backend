@@ -15,7 +15,7 @@ public class CorsConfig {
         CorsConfiguration config = new CorsConfiguration();
 
         // Permitir solicitudes del dominio de frontend (ajusta según URL)
-        config.addAllowedOrigin("http://localhost:3000"); // Para React/Vue/Angular en desarrollo
+        config.addAllowedOrigin("https://movie-vault-xi.vercel.app"); // Para React/Vue/Angular en desarrollo
 
         // También puedes agregar otros orígenes si es necesario
         // config.addAllowedOrigin("https://tudominio.com");
