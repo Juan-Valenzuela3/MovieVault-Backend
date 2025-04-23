@@ -36,4 +36,25 @@ public class MovieService {
             throw new RuntimeException("La película no existe");
         }
     }
+
+    public Movie getMovieById(Long idMovie) {
+        return movieRepository.findById(idMovie)
+                .orElseThrow(() -> new RuntimeException("Película no encontrada con id: " + idMovie));
+    }
+
+    public Movie updateMovie(Long idMovie, Movie movieDetails, String userId) {
+        Movie movie = getMovieById(idMovie);
+
+        // Verifica que la película pertenezca al usuario
+        if (!movie.getUserId().equals(userId)) {
+            throw new RuntimeException("No tienes permiso para modificar esta película");
+        }
+
+        // Actualiza solo el estado de la película
+        if (movieDetails.getStatus() != null) {
+            movie.setStatus(movieDetails.getStatus());
+        }
+
+        return movieRepository.save(movie);
+    }
 }

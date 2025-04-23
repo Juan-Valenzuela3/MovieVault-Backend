@@ -28,6 +28,9 @@ public class Movie {
     private String category;
     private String image;
 
+    @Enumerated(EnumType.STRING)
+    private MovieStatus status = MovieStatus.PENDING;
+
     @ManyToMany(mappedBy = "collection")
     private Set<Users> usersWhoCollected = new HashSet<>();
 }

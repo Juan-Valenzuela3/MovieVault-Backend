@@ -71,4 +71,18 @@ public class MovieController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Error al eliminar película: " + e.getMessage());
         }
     }
+
+    @PutMapping("/{idMovie}")
+    public ResponseEntity<?> updateMovie(@PathVariable Long idMovie,
+                                        @RequestBody Movie movie,
+                                        @RequestHeader("Authorization") String authToken) {
+        try {
+            String userId = extractUserIdFromToken(authToken);
+            Movie updatedMovie = movieService.updateMovie(idMovie, movie, userId);
+            return ResponseEntity.ok(updatedMovie);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                   .body("Error al actualizar película: " + e.getMessage());
+        }
+    }
 }
