@@ -92,3 +92,6 @@ La aplicación utiliza tokens JWT para autenticar las solicitudes a los endpoint
 ## Licencia
 
 Este proyecto está licenciado bajo [Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License](https://creativecommons.org/licenses/by-nc-nd/4.0/).
+- ✅ Puedes ver y compartir este código
+- ❌ No puedes modificar este código
+- ❌ No puedes usar este código con fines comerciales
