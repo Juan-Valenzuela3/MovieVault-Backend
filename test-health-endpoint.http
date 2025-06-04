@@ -1,0 +1,5 @@
+### Health Check Endpoint Test
+GET http://localhost:8080/api/health
+Accept: application/json
+
+###
